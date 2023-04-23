@@ -22,16 +22,37 @@ mongoClient
   .catch((err) => console.log(err.message));
 
   const signUpSchema = Joi.object({
-    name: Joi.string().required(),
-    email: Joi.string().email().required(),
-    password: Joi.string().required().min(3)
+    name: joi.string().required(),
+    email: joi.string().email().required(),
+    password: joi.string().required().min(3)
 })
 const signInSchema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().required().min(3)
+    email: joi.string().email().required(),
+    password: joi.string().required().min(3)
 })
 const transactionSchema = Joi.object({
-    value: Joi.number().precision(2).positive().required(),
-    description: Joi.string().required(),
-    type: Joi.string().valid("in", "out").required()
+    value: joi.number().precision(2).positive().required(),
+    description: joi.string().required(),
+    type: joi.string().valid("in", "out").required()
+})
+
+
+app.post("/sign-up", async (req, res) => {
+    const { name, email, password, passwordConfirmation } = req.body
+    const validation = signUpSchema.validate(req.body, { abortEarly: false })
+    if (validation.error) {
+        const erros = validation.error.details.map((detail) => detail.message)
+        return res.status(422).send(erros)
+    }
+    try {
+        const searchEmail = await db.collection("users").findOne({ email })
+        console.log(searchEmail)
+        if (searchEmail) return res.status(409).send("E-mail já registrado")
+        const hash = bcrypt.hashSync(password, 10)
+        await db.collection("users").insertOne({ name, email, password: hash })
+        res.sendStatus(201)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
 })
