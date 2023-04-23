@@ -56,3 +56,23 @@ app.post("/sign-up", async (req, res) => {
         res.status(500).send(err.message)
     }
 })
+
+app.post("/sign-in", async (req, res) => {
+    const { email, password } = req.body
+    const validation = signInSchema.validate(req.body, { abortEarly: false })
+    if (validation.error) {
+        const errors = validation.error.details.map((detail) => detail.message)
+        return res.status(422).send(errors)
+    }
+        const searchEmail = await db.collection("users").findOne({ email })
+        if (!searchEmail) return res.status(404).send("E-mail não cadastrado. Faça o registro e tente novamente.")
+
+        const searchPassword = bcrypt.compareSync(password, searchEmail.password)
+        if (!searchPassword) return res.status(401).send("Senha incorreta")
+
+        const token = uuid()
+
+        await db.collection("sessions").insertOne({ token, userId: searchEmail._id })
+
+        res.status(200).send(token)
+})
