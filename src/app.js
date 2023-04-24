@@ -73,7 +73,7 @@ app.post("/sign-in", async (req, res) => {
 
         await db.collection("sessions").insertOne({ token, userId: searchEmail._id })
 
-        res.status(200).send(token)
+        res.status(200).send({token, name : searchEmail.name})
 })
 
 app.post("/newTransaction/:type", async (req, res) => {
