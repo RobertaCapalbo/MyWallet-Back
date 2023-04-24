@@ -21,16 +21,16 @@ mongoClient
   .then(() => (db = mongoClient.db()))
   .catch((err) => console.log(err.message));
 
-  const signUpSchema = Joi.object({
+  const signUpSchema = joi.object({
     name: joi.string().required(),
     email: joi.string().email().required(),
     password: joi.string().required().min(3)
 })
-const signInSchema = Joi.object({
+const signInSchema = joi.object({
     email: joi.string().email().required(),
     password: joi.string().required().min(3)
 })
-const transactionSchema = Joi.object({
+const transactionSchema = joi.object({
     value: joi.number().precision(2).positive().required(),
     description: joi.string().required(),
     type: joi.string().valid("in", "out").required()
@@ -76,3 +76,63 @@ app.post("/sign-in", async (req, res) => {
 
         res.status(200).send(token)
 })
+
+app.post("/newTransaction/:type", async (req, res) => {
+    const { value, description, type } = req.body
+    const { authorization } = req.headers
+    const token = authorization?.replace("Bearer ", "")
+    if (!token) return res.sendStatus(401)
+    const validation = transactionSchema.validate(req.body)
+    if (validation.error) {
+        const errors = validation.error.details.map((detail) => detail.message)
+        return res.status(422).send(errors)
+    }
+    try {
+        const session = await db.collection("sessions").findOne({ token })
+        if (!session) return res.sendStatus(401)
+        await db.collection("transactions").insertOne({ value, description, type, date: dayjs().format('DD/MM'), userId: session.userId })
+        res.sendStatus(201)
+    } catch (err) {
+        res.status(500).send(err.message)
+    }
+})
+
+app.get("/sign-up", async (req, res) => {
+    try {
+        const users = await db.collection("users").find().toArray()
+        users.forEach((user) => {
+            delete user.password
+        })
+        res.send(users)
+    } catch (err) {
+        return res.status(500).send(err.message)
+    }
+})
+
+app.get("/sign-in", async (req, res) => {
+    try {
+        const session = await db.collection("sessions").find().toArray()
+        res.send(session)
+    } catch (err) {
+        return res.status(500).send(err.message)
+    }
+})
+
+app.get("/transaction", async (req, res) => {
+    const { authorization } = req.headers
+    const token = authorization?.replace("Bearer ", "")
+    if (!token) return res.status(401).send("Token inexistente: registre-se e tente novamente!")
+    const session = await db.collection("sessions").findOne({ token })
+    if (!session) return res.status(401).send("Token inválido: tente novamente.")
+    try {
+        const registration = await db.collection("transactions").find({ userId: session.userId }).toArray()
+        res.status(200).send(registration)
+    }
+    catch (err) {
+        return res.status(500).send(err.message)
+    }
+})
+
+server.listen(5000, ()=> {
+    console.log('Listening on Port 5000');
+}); 
