@@ -90,7 +90,7 @@ app.post("/newTransaction/:type", async (req, res) => {
     try {
         const session = await db.collection("sessions").findOne({ token })
         if (!session) return res.sendStatus(401)
-        await db.collection("transactions").insertOne({ value, description, type, date: dayjs().format('DD/MM'), userId: session.userId })
+        await db.collection("records").insertOne({ value, description, type, date: dayjs().format('DD/MM'), userId: session.userId })
         res.sendStatus(201)
     } catch (err) {
         res.status(500).send(err.message)
@@ -118,14 +118,14 @@ app.get("/sign-in", async (req, res) => {
     }
 })
 
-app.get("/transaction", async (req, res) => {
+app.get("/records", async (req, res) => {
     const { authorization } = req.headers
     const token = authorization?.replace("Bearer ", "")
     if (!token) return res.status(401).send("Token inexistente: registre-se e tente novamente!")
     const session = await db.collection("sessions").findOne({ token })
     if (!session) return res.status(401).send("Token inválido: tente novamente.")
     try {
-        const registration = await db.collection("transactions").find({ userId: session.userId }).toArray()
+        const registration = await db.collection("records").find({ userId: session.userId }).toArray()
         res.status(200).send(registration)
     }
     catch (err) {
