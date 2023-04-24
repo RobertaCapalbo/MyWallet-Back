@@ -112,6 +112,6 @@ app.get("/records", async (req, res) => {
     }
 })
 
-server.listen(5000, ()=> {
-    console.log('Listening on Port 5000');
-}); 
+app.listen(process.env.PORT, () => {
+    console.log("Server running on port " + process.env.PORT);
+});
