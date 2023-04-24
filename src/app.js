@@ -38,7 +38,7 @@ const transactionSchema = joi.object({
 
 
 app.post("/sign-up", async (req, res) => {
-    const { name, email, password, passwordConfirmation } = req.body
+    const { name, email, password} = req.body
     const validation = signUpSchema.validate(req.body, { abortEarly: false })
     if (validation.error) {
         const erros = validation.error.details.map((detail) => detail.message)
@@ -46,7 +46,6 @@ app.post("/sign-up", async (req, res) => {
     }
     try {
         const searchEmail = await db.collection("users").findOne({ email })
-        console.log(searchEmail)
         if (searchEmail) return res.status(409).send("E-mail já registrado")
         const hash = bcrypt.hashSync(password, 10)
         await db.collection("users").insertOne({ name, email, password: hash })
@@ -97,26 +96,6 @@ app.post("/newTransaction/:type", async (req, res) => {
     }
 })
 
-app.get("/sign-up", async (req, res) => {
-    try {
-        const users = await db.collection("users").find().toArray()
-        users.forEach((user) => {
-            delete user.password
-        })
-        res.send(users)
-    } catch (err) {
-        return res.status(500).send(err.message)
-    }
-})
-
-app.get("/sign-in", async (req, res) => {
-    try {
-        const session = await db.collection("sessions").find().toArray()
-        res.send(session)
-    } catch (err) {
-        return res.status(500).send(err.message)
-    }
-})
 
 app.get("/records", async (req, res) => {
     const { authorization } = req.headers
