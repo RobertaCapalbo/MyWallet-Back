@@ -2,6 +2,7 @@
 import { db } from "../Database/Database.js"
 import {signInSchema} from "../Schemas/Schemas.js"
 import {transactionSchema} from "../Schemas/Schemas.js"
+import {validateSchema} from "../Middlewares/ValidationMiddleware.js"
 
 
 export async function one (req, res){
@@ -9,11 +10,10 @@ export async function one (req, res){
     const { authorization } = req.headers
     const token = authorization?.replace("Bearer ", "")
     if (!token) return res.sendStatus(401)
-    const validation = transactionSchema.validate(req.body)
-    if (validation.error) {
-        const errors = validation.error.details.map((detail) => detail.message)
-        return res.status(422).send(errors)
-    }
+
+    const errors = validateSchema(req.body)
+    if (errors) return res.status(422).send(errors)
+
     try {
         const session = await db.collection("sessions").findOne({ token })
         if (!session) return res.sendStatus(401)
