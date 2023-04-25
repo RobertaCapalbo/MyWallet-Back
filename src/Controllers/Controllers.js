@@ -2,24 +2,28 @@
 import { db } from "../Database/Database.js"
 import {signInSchema} from "../Schemas/Schemas.js"
 import {transactionSchema} from "../Schemas/Schemas.js"
-import {validateSchema} from "../Middlewares/ValidationMiddleware.js"
+import {signUpSchema} from "../Schemas/Schemas.js"
+import bcrypt from "bcrypt"
+import { v4 as uuid } from "uuid" 
+import dayjs from "dayjs"
 
 
 export async function one (req, res){
-    const { value, description, type } = req.body
-    const { authorization } = req.headers
-    const token = authorization?.replace("Bearer ", "")
-    if (!token) return res.sendStatus(401)
-
-    const errors = validateSchema(req.body)
-    if (errors) return res.status(422).send(errors)
-
+    const { name, email, password} = req.body
+    const validation = signUpSchema.validate(req.body, { abortEarly: false })
+    if (validation.error) {
+        const erros = validation.error.details.map((detail) => detail.message)
+        return res.status(422).send(erros)
+    }
+    console.log(req.body)
     try {
-        const session = await db.collection("sessions").findOne({ token })
-        if (!session) return res.sendStatus(401)
-        await db.collection("records").insertOne({ value, description, type, date: dayjs().format('DD/MM'), userId: session.userId })
+        const searchEmail = await db.collection("users").findOne({ email })
+        if (searchEmail) return res.status(409).send("E-mail já registrado")
+        const hash = bcrypt.hashSync(password, 10)
+        await db.collection("users").insertOne({ name, email, password: hash })
         res.sendStatus(201)
-    } catch (err) {
+    }
+    catch (err) {
         res.status(500).send(err.message)
     }
 }
